@@ -11,16 +11,21 @@ knitr::opts_chunk$set(echo = TRUE)
 
 ## Laundry
 
-This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
 
-When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
 
 ```{r load}
 library(mlogit)
 library(ggplot2)
 library(dplyr)
 laundryraw<-read.table("LAUNDRY.txt")
+```
+
+The laundry detergent data has alternate-row granularity
+```{r}
+
+
 colnames(laundryraw)<-c("panel_id","week","choice","loyal","price","feature","display","alt1","alt2","alt3","obs")
+knitr::kable(head(laundryraw))
 
 #there is probably a reshape/tidyr/dplyr method for binary response to categorical but I can't find it
 laundryraw %>% mutate(alt = as.factor(ifelse(alt1==1,"alt1",ifelse(alt2==1,"alt2",ifelse(alt3==1,"alt3","def"))))) %>%

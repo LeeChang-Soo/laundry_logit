@@ -118,8 +118,6 @@ $(document).ready(function () {
 
 <div id="laundry" class="section level2">
 <h2>Laundry</h2>
-<p>This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <a href="http://rmarkdown.rstudio.com" class="uri">http://rmarkdown.rstudio.com</a>.</p>
-<p>When you click the <strong>Knit</strong> button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:</p>
 <pre class="r"><code>library(mlogit)</code></pre>
 <pre><code>## Loading required package: Formula</code></pre>
 <pre><code>## Loading required package: maxLik</code></pre>
@@ -140,10 +138,108 @@ library(dplyr)</code></pre>
 <pre><code>## The following objects are masked from 'package:base':
 ## 
 ##     intersect, setdiff, setequal, union</code></pre>
-<pre class="r"><code>laundryraw&lt;-read.table(&quot;LAUNDRY.txt&quot;)
-colnames(laundryraw)&lt;-c(&quot;panel_id&quot;,&quot;week&quot;,&quot;choice&quot;,&quot;loyal&quot;,&quot;price&quot;,&quot;feature&quot;,&quot;display&quot;,&quot;alt1&quot;,&quot;alt2&quot;,&quot;alt3&quot;,&quot;obs&quot;)
-
-#there is probably a reshape/tidyr/dplyr method for binary response to categorical but I can't find it
+<pre class="r"><code>laundryraw&lt;-read.table(&quot;LAUNDRY.txt&quot;)</code></pre>
+<p>The laundry detergent data has alternate-row granularity</p>
+<pre class="r"><code>colnames(laundryraw)&lt;-c(&quot;panel_id&quot;,&quot;week&quot;,&quot;choice&quot;,&quot;loyal&quot;,&quot;price&quot;,&quot;feature&quot;,&quot;display&quot;,&quot;alt1&quot;,&quot;alt2&quot;,&quot;alt3&quot;,&quot;obs&quot;)
+knitr::kable(head(laundryraw))</code></pre>
+<table>
+<thead>
+<tr class="header">
+<th align="right">panel_id</th>
+<th align="right">week</th>
+<th align="right">choice</th>
+<th align="right">loyal</th>
+<th align="right">price</th>
+<th align="right">feature</th>
+<th align="right">display</th>
+<th align="right">alt1</th>
+<th align="right">alt2</th>
+<th align="right">alt3</th>
+<th align="right">obs</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td align="right">9</td>
+<td align="right">11</td>
+<td align="right">1</td>
+<td align="right">0.00</td>
+<td align="right">4.67</td>
+<td align="right">0</td>
+<td align="right">0</td>
+<td align="right">1</td>
+<td align="right">0</td>
+<td align="right">0</td>
+<td align="right">1</td>
+</tr>
+<tr class="even">
+<td align="right">9</td>
+<td align="right">11</td>
+<td align="right">2</td>
+<td align="right">0.62</td>
+<td align="right">4.98</td>
+<td align="right">0</td>
+<td align="right">0</td>
+<td align="right">0</td>
+<td align="right">1</td>
+<td align="right">0</td>
+<td align="right">1</td>
+</tr>
+<tr class="odd">
+<td align="right">9</td>
+<td align="right">11</td>
+<td align="right">2</td>
+<td align="right">0.31</td>
+<td align="right">5.38</td>
+<td align="right">0</td>
+<td align="right">0</td>
+<td align="right">0</td>
+<td align="right">0</td>
+<td align="right">1</td>
+<td align="right">1</td>
+</tr>
+<tr class="even">
+<td align="right">9</td>
+<td align="right">11</td>
+<td align="right">2</td>
+<td align="right">0.00</td>
+<td align="right">4.98</td>
+<td align="right">0</td>
+<td align="right">0</td>
+<td align="right">0</td>
+<td align="right">0</td>
+<td align="right">0</td>
+<td align="right">1</td>
+</tr>
+<tr class="odd">
+<td align="right">9</td>
+<td align="right">29</td>
+<td align="right">2</td>
+<td align="right">0.00</td>
+<td align="right">4.67</td>
+<td align="right">0</td>
+<td align="right">0</td>
+<td align="right">1</td>
+<td align="right">0</td>
+<td align="right">0</td>
+<td align="right">2</td>
+</tr>
+<tr class="even">
+<td align="right">9</td>
+<td align="right">29</td>
+<td align="right">1</td>
+<td align="right">0.62</td>
+<td align="right">4.67</td>
+<td align="right">1</td>
+<td align="right">0</td>
+<td align="right">0</td>
+<td align="right">1</td>
+<td align="right">0</td>
+<td align="right">2</td>
+</tr>
+</tbody>
+</table>
+<pre class="r"><code>#there is probably a reshape/tidyr/dplyr method for binary response to categorical but I can't find it
 laundryraw %&gt;% mutate(alt = as.factor(ifelse(alt1==1,&quot;alt1&quot;,ifelse(alt2==1,&quot;alt2&quot;,ifelse(alt3==1,&quot;alt3&quot;,&quot;def&quot;))))) %&gt;%
 mutate(choice = ifelse(choice==2,0,1)) %&gt;% select(-alt1,-alt2,-alt3) %&gt;%
   mutate(week = as.factor(week)) %&gt;%
@@ -438,7 +534,7 @@ summary(week_model)</code></pre>
 ## 0.23851 0.51437 0.12069 0.12644 
 ## 
 ## nr method
-## 19 iterations, 0h:0m:3s 
+## 19 iterations, 0h:0m:2s 
 ## g'(-H)^-1g = 7.85E-07 
 ## gradient close to zero 
 ## 
@@ -624,6 +720,14 @@ summary(week_model)</code></pre>
 <pre class="r"><code>coef(market_model)[&quot;loyal&quot;]/(-coef(market_model)[&quot;price&quot;])</code></pre>
 <pre><code>##    loyal 
 ## 6.262305</code></pre>
+<p>The value of a unit of loyalty is very high. Of those 148 instances of ‘1’ loyalty, the favored detergent was selected 134 times.</p>
+<pre class="r"><code>laundry %&gt;% filter(loyal==1) %&gt;% group_by(choice) %&gt;% summarize(sel=n())</code></pre>
+<pre><code>## Source: local data frame [2 x 2]
+## 
+##   choice   sel
+##    (dbl) (int)
+## 1      0    14
+## 2      1   134</code></pre>
 </div>
 
 
