@@ -1,0 +1,131 @@
+---
+title: "Laundry"
+author: "Jeremy Leipzig"
+date: "May 10, 2016"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Laundry
+
+This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+
+When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
+
+```{r load}
+library(mlogit)
+library(ggplot2)
+library(dplyr)
+laundryraw<-read.table("LAUNDRY.txt")
+colnames(laundryraw)<-c("panel_id","week","choice","loyal","price","feature","display","alt1","alt2","alt3","obs")
+
+#there is probably a reshape/tidyr/dplyr method for binary response to categorical but I can't find it
+laundryraw %>% mutate(alt = as.factor(ifelse(alt1==1,"alt1",ifelse(alt2==1,"alt2",ifelse(alt3==1,"alt3","def"))))) %>%
+mutate(choice = ifelse(choice==2,0,1)) %>% select(-alt1,-alt2,-alt3) %>%
+  mutate(week = as.factor(week)) %>%
+  mutate(display = as.factor(display)) %>%
+  mutate(feature = as.factor(feature)) %>%
+  mutate(choice = as.numeric(choice)) %>%
+  mutate(obs = as.factor(obs)) %>%
+  mutate(panel_id = as.factor(panel_id)) -> laundry
+
+```
+At first glance how is price a determiniant of choice?
+```{r choice}
+ggplot(laundry,aes(price))+geom_histogram((aes(fill=as.factor(choice))))
+laundry %>% group_by(obs) %>% mutate(rank=rank(price)) %>% filter(choice == 1) %>% ungroup %>% group_by(rank) %>% summarize(ranks=n()) -> price_hist
+
+laundry %>% group_by(obs) %>% summarize(mean_price=mean(price))
+ggplot(price_hist,aes(as.factor(rank),ranks))+geom_bar(stat="identity")+xlab("rank")+ylab("occurences of choice 1")
+```
+
+Is product feature a determining factor
+```{r feature}
+laundry %>% group_by(choice,feature) %>% summarize(actual=n()) -> ct_tab
+table(laundry$choice,laundry$feature) -> ch_ct
+feat_tab<-table(laundry$feature)
+```
+
+```{r do_prop_test}
+ct_prob<-feat_tab[[2]]/sum(feat_tab)
+ct_not<-feat_tab[[1]]/sum(feat_tab)
+choice_prob<-.25
+choice_not<-.75
+ct_tab$expected<-sum(ct_tab$actual)*c(choice_not*ct_not,choice_not*ct_prob,choice_prob*ct_not,choice_prob*ct_prob)
+ct_tab$ratio<-round(ct_tab$actual/ct_tab$expected,2)
+knitr::kable(ct_tab)
+prop.test(ch_ct)
+```
+
+Is product display a determining factor?
+```{r display}
+laundry %>% group_by(choice,display) %>% summarize(actual=n()) -> ct_tab
+table(laundry$choice,laundry$display) -> ch_ct
+feat_tab<-table(laundry$display)
+```
+
+```{r disppretty,ref.label='do_prop_test'}
+```
+
+## And loyalty?
+```{r loyal}
+laundry %>% group_by(choice) %>% summarize(mean_loyalty=mean(loyal),sd_loyalty=sd(loyal)) -> loyal_tab
+knitr::kable(loyal_tab)
+ggplot(laundry,aes(as.factor(choice),loyal))+geom_boxplot()
+t.test(laundry %>% filter(choice==1) %>% select(loyal), laundry %>% filter(choice==0) %>% select(loyal))
+```
+
+## By week?
+```{r week}
+ggplot(laundry,aes(week,price))+geom_point(aes(color=as.factor(choice),shape=as.factor(display)))
+```
+
+## Using mlogit
+```{r mlogit}
+#long if each row is an alternate
+laundry.mlogit <- 
+  mlogit.data(data=laundry, choice="choice", 
+              shape="long", 
+              alt.levels=c("def","alt1","alt2","alt3"), 
+              id.var="obs")
+```
+
+A null model of just the the alternates:
+```{r nullmodel}
+null_model<-mlogit(choice ~ alt, data = laundry.mlogit, method = "nr", probit = FALSE, print.level = 0)
+summary(null_model)
+```
+AIC: `r AIC(null_model)`
+
+A model with the alternates and all marketing features:
+```{r marketing}
+market_model<-mlogit(choice ~ price + loyal + feature + display, data = laundry.mlogit, method = "nr", probit = FALSE, print.level = 0)
+
+summary(market_model)
+```
+AIC (smaller is better): `r AIC(market_model)`
+
+A model with the alternates and all marketing features and week:
+```{r week_mod}
+week_model<-mlogit(choice ~ price + loyal + feature + display | week , data = laundry.mlogit, method = "nr", probit = FALSE, print.level = 0)
+
+summary(week_model)
+```
+AIC: `r AIC(week_model)`
+
+## What is the value of displays & features
+See [Feit's presentation](http://r-marketing.r-forge.r-project.org/slides/chapter13-phillyR/ConjointR20150418.html#/21)
+```{r dispvalue}
+coef(market_model)["display1"]/(-coef(market_model)["price"])
+coef(market_model)["feature1"]/(-coef(market_model)["price"])
+coef(market_model)["loyal"]/(-coef(market_model)["price"])
+```
+
+The value of a unit of loyalty is very high. Of those 148 instances of '1' loyalty, the favored detergent was selected 134 times.
+
+```{r loybrk}
+laundry %>% filter(loyal==1) %>% group_by(choice) %>% summarize(sel=n())
+```
